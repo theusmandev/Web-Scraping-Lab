@@ -1,56 +1,70 @@
-import requests
-from bs4 import BeautifulSoup
+
+
+
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import time
-import csv
+import pandas as pd
 
-HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-                         '(KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36'}
+# Start Chrome
+driver = webdriver.Chrome()
+driver.get("https://www.shop.markaz.app/explore/supplier/605")
+wait = WebDriverWait(driver, 10)
+time.sleep(5)
 
-BASE_URL = ""
-START_URL = ""
+# List to store scraped data
+data = []
 
-def get_soup(url):
-    res = requests.get(url, headers=HEADERS)
-    res.raise_for_status()
-    return BeautifulSoup(res.text, "html.parser")
+# Reach page 51 manually by clicking "Next" 50 times
+for i in range(1, 51):
+    try:
+        next_button = wait.until(EC.element_to_be_clickable(
+            (By.XPATH, "//a[text()='Next']")
+        ))
+        driver.execute_script("arguments[0].click();", next_button)
+        print(f"Reached Page {i+1}")
+        time.sleep(5)
+    except Exception as e:
+        print("❌ Couldn't reach Page 51:", e)
+        driver.quit()
+        exit()
 
-def parse_product_detail(url):
-    soup = get_soup(BASE_URL + url)
-    title = soup.select_one("h1.product-title").get_text(strip=True)
-    price = soup.select_one(".product-price").get_text(strip=True)
-    img = soup.select_one(".product-image img")["src"]
-    desc = soup.select_one(".product-description").get_text(strip=True)
-    return {"title": title, "price": price, "image": img, "description": desc, "url": BASE_URL+url}
+# Now scrape from Page 51 to Page 73
+for page in range(51, 74):  
+    print(f"\n--- Scraping Page {page} ---")
+    time.sleep(3)
 
-def scrape_supplier():
-    page = 1
-    all_products = []
+    # Scroll to bottom to load products
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+    time.sleep(3)
 
-    while True:
-        page_url = f"{START_URL}?page={page}"
-        soup = get_soup(page_url)
-        items = soup.select(".product-card a")  # adjust selector as needed
+    # Get products
+    products = driver.find_elements(By.CSS_SELECTOR, "a[href*='/explore/product/']")
+    for product in products:
+        title = product.text.strip()
+        link = product.get_attribute("href")
+        if title:
+            print(f"Title: {title}\nLink: {link}\n")
+            data.append({"Title": title, "Link": link})
 
-        if not items:
+    if page < 73:
+        try:
+            next_button = wait.until(EC.element_to_be_clickable(
+                (By.XPATH, "//a[text()='Next']")
+            ))
+            driver.execute_script("arguments[0].click();", next_button)
+            time.sleep(5)
+        except Exception as e:
+            print("❌ Couldn't click Next on page", page, ":", e)
             break
 
-        for a in items:
-            link = a["href"]
-            try:
-                data = parse_product_detail(link)
-                all_products.append(data)
-                time.sleep(0.5)  # polite scraping
-            except Exception as e:
-                print(f"Error scraping {link}: {e}")
+# Close browser
+driver.quit()
 
-        page += 1
-
-    return all_products
-
-if __name__ == "__main__":
-    products = scrape_supplier()
-    with open("markaz_products.csv", "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=products[0].keys())
-        writer.writeheader()
-        writer.writerows(products)
-    print(f"Scraped {len(products)} products ✅")
+# Save data to Excel
+df = pd.DataFrame(data)
+df.to_excel("markaz_products_page51_to_73.xlsx", index=False)
+print("✅ Data saved to markaz_products_page51_to_73.xlsx")
