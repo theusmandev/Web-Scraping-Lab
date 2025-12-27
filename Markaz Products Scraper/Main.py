@@ -1,39 +1,56 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+import requests
+from bs4 import BeautifulSoup
 import time
+import csv
 
-# Set Chrome options to ignore SSL errors
-chrome_options = Options()
-chrome_options.add_argument("--ignore-certificate-errors")
-driver = webdriver.Chrome(options=chrome_options)  # Ensure ChromeDriver is installed
+HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                         '(KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36'}
 
-base_url = "https://www.shop.markaz.app/explore/supplier/605"
+BASE_URL = ""
+START_URL = ""
 
-try:
-    for page in range(1, 4):
-        driver.get(base_url)
-        # Increase wait time and adjust selector
-        try:
-            WebDriverWait(driver, 15).until(  # Increased to 15 seconds
-                EC.presence_of_all_elements_located((By.CLASS_NAME, "product-item"))  # Adjust to actual class
-            )
-            products = driver.find_elements(By.CLASS_NAME, "product-item")  # Adjust to actual class
-            if not products:
-                print(f"No products found on page {page}. Check selectors.")
-            for product in products:
-                try:
-                    title = product.find_element(By.CLASS_NAME, "title").text  # Adjust to actual class
-                    price = product.find_element(By.CLASS_NAME, "price").text  # Adjust to actual class
-                    print(f"Title: {title}, Price: {price}")
-                except Exception as e:
-                    print(f"Could not extract data from a product on page {page}: {e}")
-        except Exception as e:
-            print(f"Timeout or error on page {page}: {e}")
-        time.sleep(2)
-except Exception as e:
-    print(f"Main error: {e}")
-finally:
-    driver.quit()
+def get_soup(url):
+    res = requests.get(url, headers=HEADERS)
+    res.raise_for_status()
+    return BeautifulSoup(res.text, "html.parser")
+
+def parse_product_detail(url):
+    soup = get_soup(BASE_URL + url)
+    title = soup.select_one("h1.product-title").get_text(strip=True)
+    price = soup.select_one(".product-price").get_text(strip=True)
+    img = soup.select_one(".product-image img")["src"]
+    desc = soup.select_one(".product-description").get_text(strip=True)
+    return {"title": title, "price": price, "image": img, "description": desc, "url": BASE_URL+url}
+
+def scrape_supplier():
+    page = 1
+    all_products = []
+
+    while True:
+        page_url = f"{START_URL}?page={page}"
+        soup = get_soup(page_url)
+        items = soup.select(".product-card a")  # adjust selector as needed
+
+        if not items:
+            break
+
+        for a in items:
+            link = a["href"]
+            try:
+                data = parse_product_detail(link)
+                all_products.append(data)
+                time.sleep(0.5)  # polite scraping
+            except Exception as e:
+                print(f"Error scraping {link}: {e}")
+
+        page += 1
+
+    return all_products
+
+if __name__ == "__main__":
+    products = scrape_supplier()
+    with open("markaz_products.csv", "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=products[0].keys())
+        writer.writeheader()
+        writer.writerows(products)
+    print(f"Scraped {len(products)} products ✅")
