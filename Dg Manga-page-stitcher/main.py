@@ -1,3 +1,10 @@
+
+"""
+Save as: download_digest_pages.py
+Requires: requests, beautifulsoup4, pillow
+Install: pip install requests beautifulsoup4 pillow
+"""
+
 import os
 import re
 import base64
@@ -8,14 +15,19 @@ import requests
 from bs4 import BeautifulSoup
 
 # -------- CONFIG ----------
-BASE_PAGE_URL = "https://thisaccessories.com/reading-base/?cat=180&paged={page}"
+
+
+BASE_PAGE_URL = "https://thisaccessories.com/reading-base/?cat=183&paged={page}"
 OUTPUT_DIR = "downloaded_pages"
-START_PAGE = 1
-END_PAGE = 5   # change to your total pages (e.g. 216)
+START_PAGE = 6
+END_PAGE = 218   # change to your total pages (e.g. 216)
 REQUEST_DELAY = 0.8  # seconds between requests
 MAX_RETRIES = 2       # 🔁 number of retry attempts
 USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
               "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0 Safari/537.36")
+
+# JPEG Optimization Settings
+JPEG_QUALITY = 85  # between 70–90 recommended for digest pages
 # --------------------------
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -84,8 +96,14 @@ def download_and_stitch_page(page_num):
             return False
         stitched = stitch_vertical(imgs)
         if stitched:
-            out_name = os.path.join(OUTPUT_DIR, f"page_{page_num:03d}.png")
-            stitched.save(out_name, format="PNG")
+            out_name = os.path.join(OUTPUT_DIR, f"page_{page_num:03d}.jpg")
+            stitched.save(
+                out_name,
+                format="JPEG",
+                quality=JPEG_QUALITY,
+                optimize=True,
+                progressive=True
+            )
             print(f"  ✅ Saved {out_name} ({stitched.width}x{stitched.height})")
             return True
     except Exception as e:
@@ -115,7 +133,6 @@ def main():
     print(f"Failed pages after {MAX_RETRIES} retries: {len(failed_pages)}")
     if failed_pages:
         print("❌ Missing / Failed pages:", ", ".join(map(str, failed_pages)))
-        # Optional: Save failed pages to file
         with open(os.path.join(OUTPUT_DIR, "failed_pages.txt"), "w") as f:
             f.write("\n".join(map(str, failed_pages)))
         print("📝 Failed pages list saved to 'failed_pages.txt'")
@@ -125,3 +142,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
