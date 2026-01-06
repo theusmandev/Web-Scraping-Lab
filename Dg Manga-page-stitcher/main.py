@@ -1,10 +1,3 @@
-
-"""
-Save as: download_digest_pages.py
-Requires: requests, beautifulsoup4, pillow
-Install: pip install requests beautifulsoup4 pillow
-"""
-
 import os
 import re
 import base64
@@ -18,8 +11,9 @@ from bs4 import BeautifulSoup
 BASE_PAGE_URL = "https://thisaccessories.com/reading-base/?cat=180&paged={page}"
 OUTPUT_DIR = "downloaded_pages"
 START_PAGE = 1
-END_PAGE = 5  # 🔹 test with few pages first
+END_PAGE = 5   # change to your total pages (e.g. 216)
 REQUEST_DELAY = 0.8  # seconds between requests
+MAX_RETRIES = 2       # 🔁 number of retry attempts
 USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
               "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0 Safari/537.36")
 # --------------------------
@@ -52,7 +46,7 @@ def extract_images_from_html(html):
                 img = Image.open(io.BytesIO(raw)).convert("RGB")
                 imgs.append(img)
             except Exception as e:
-                print("  ❌ Failed to decode data URI image:", e)
+                print("  ❌ Failed to decode base64 image:", e)
         else:
             try:
                 if src.startswith("//"):
@@ -101,7 +95,15 @@ def download_and_stitch_page(page_num):
 def main():
     failed_pages = []
     for p in range(START_PAGE, END_PAGE + 1):
-        success = download_and_stitch_page(p)
+        success = False
+        for attempt in range(1, MAX_RETRIES + 1):
+            print(f"\n➡️ Attempt {attempt} for page {p}")
+            if download_and_stitch_page(p):
+                success = True
+                break
+            else:
+                print(f"  🔁 Retrying page {p} after delay...")
+                time.sleep(REQUEST_DELAY * 2)
         if not success:
             failed_pages.append(p)
         time.sleep(REQUEST_DELAY)
@@ -110,16 +112,16 @@ def main():
     print("📊 DOWNLOAD SUMMARY")
     print(f"Total pages attempted: {END_PAGE - START_PAGE + 1}")
     print(f"Successful pages: {(END_PAGE - START_PAGE + 1) - len(failed_pages)}")
-    print(f"Failed pages: {len(failed_pages)}")
+    print(f"Failed pages after {MAX_RETRIES} retries: {len(failed_pages)}")
     if failed_pages:
         print("❌ Missing / Failed pages:", ", ".join(map(str, failed_pages)))
+        # Optional: Save failed pages to file
+        with open(os.path.join(OUTPUT_DIR, "failed_pages.txt"), "w") as f:
+            f.write("\n".join(map(str, failed_pages)))
+        print("📝 Failed pages list saved to 'failed_pages.txt'")
     else:
         print("✅ All pages downloaded successfully!")
     print("=" * 60 + "\n")
 
 if __name__ == "__main__":
     main()
-
-
-
-
