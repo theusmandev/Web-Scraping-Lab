@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 # -------- CONFIG ----------
 
 BASE_PAGE_URL = "https://thisaccessories.com/reading-base/?cat=202&paged={page}"
-OUTPUT_DIR = "downloaded_pages"
+OUTPUT_DIR = r"E:\git-workstation\Web-Scraping-Lab\Dg Manga-page-stitcher\downloaded_pages"
 START_PAGE = 30
 END_PAGE = 63   # change to your total pages (e.g. 216)
 REQUEST_DELAY = 0.8  # seconds between requests
