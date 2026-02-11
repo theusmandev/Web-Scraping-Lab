@@ -31,5 +31,5 @@ def images_to_pdf(folder_path):
     print(f"✅ PDF created successfully: {output_pdf}")
 
 # 🧩 Example usage
-folder_path = r"E:\SUNB\scrape digest\downloaded_pages"# apna folder path likho
+folder_path = r"E:\git-workstation\Web-Scraping-Lab\Dg Manga-page-stitcher\downloaded_pages"# apna folder path likho
 images_to_pdf(folder_path)

@@ -17,10 +17,10 @@ from bs4 import BeautifulSoup
 # -------- CONFIG ----------
 
 
-BASE_PAGE_URL = "https://thisaccessories.com/reading-base/?cat=183&paged={page}"
+BASE_PAGE_URL = "https://thisaccessories.com/reading-base/?cat=210&paged={page}"
 OUTPUT_DIR = r"E:\git-workstation\Web-Scraping-Lab\Dg Manga-page-stitcher\downloaded_pages"
-START_PAGE = 6
-END_PAGE = 218   # change to your total pages (e.g. 216)
+START_PAGE = 29
+END_PAGE = 70   # change to your total pages (e.g. 216)
 REQUEST_DELAY = 0.8  # seconds between requests
 MAX_RETRIES = 2       # 🔁 number of retry attempts
 USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
